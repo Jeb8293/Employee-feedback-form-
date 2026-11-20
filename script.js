@@ -1,12 +1,11 @@
 /*
  * Front Desk Team Feedback - GitHub Pages-ready survey.
- * FormSubmit emails the responses to the address configured below.
- * IMPORTANT: Send a test submission and activate your FormSubmit destination
- * through the email FormSubmit sends before inviting employees to use the form.
+ * Uses FormSubmit's regular HTML POST endpoint, not the AJAX endpoint.
+ * The first post requests email activation; complete activation and confirm
+ * delivery with a second test before inviting associates to use the form.
+ * No associate email address is requested or submitted.
  */
 
-const DESTINATION_EMAIL = "j.buser3@gmail.com";
-const ENDPOINT = `https://formsubmit.co/ajax/${encodeURIComponent(DESTINATION_EMAIL)}`;
 const TOTAL_QUESTIONS = 4;
 
 const form = document.getElementById("feedbackForm");
@@ -71,27 +70,12 @@ function getSelected(name) {
   return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(el => el.value);
 }
 
-function buildPayload() {
-  const training = getSelected("training");
-  const guestIssue = getSelected("guestIssue");
-  return {
-    _subject: "Front Desk Team Feedback | Austin Downtown",
-    _template: "table",
-    _captcha: "false",
-    _honey: getValue("companyWebsite"),
-    "1. Biggest shift challenge": getValue("shiftChallenge") || "No response",
-    "2. Training or guidance needed": training.length ? training.join("; ") : "No selection",
-    "2a. Training details": getValue("trainingDetail") || "No response",
-    "3. Biggest guest experience issue": guestIssue[0] || "No selection",
-    "3a. Guest experience details": getValue("guestDetail") || "No response",
-    "4. One improvement for the next 30 days": getValue("oneImprovement") || "No response"
-  };
-}
-
-async function sendFeedback() {
+function sendFeedback() {
   if (sending || finished) return;
-  // Prevent empty submissions while keeping individual questions optional.
-  const hasContent = ["shiftChallenge", "trainingDetail", "guestDetail", "oneImprovement"].some(id => Boolean(getValue(id))) || getSelected("training").length || getSelected("guestIssue").length;
+
+  // At least one response is required; every individual question remains optional.
+  const hasContent = ["shiftChallenge", "trainingDetail", "guestDetail", "oneImprovement"]
+    .some(id => Boolean(getValue(id))) || getSelected("training").length || getSelected("guestIssue").length;
   if (!hasContent) {
     showError("Please answer at least one question before submitting. You can go back to any question, and the rest may be left blank.");
     return;
@@ -102,38 +86,13 @@ async function sendFeedback() {
   backButton.disabled = true;
   nextButtonText.textContent = "Sending...";
   submitSpinner.hidden = false;
-  formStatus.textContent = "Sending your feedback. Please wait.";
+  formStatus.textContent = "Sending your feedback through the form service.";
   submitAlert.hidden = true;
 
-  try {
-    const response = await fetch(ENDPOINT, {
-      method: "POST",
-      mode: "cors",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(buildPayload())
-    });
-    let data;
-    try { data = await response.json(); } catch (_) { data = null; }
-    const succeeded = response.ok && (data?.success === true || data?.success === "true");
-    if (!succeeded) {
-      const serviceMessage = typeof data?.message === "string" ? data.message : "";
-      if (/activat|confirm|verif/i.test(serviceMessage)) {
-        throw new Error("This form still needs email activation. Please let management know so they can activate it before collecting feedback.");
-      }
-      throw new Error("We couldn't confirm your response was sent. Please try again in a moment.");
-    }
-    finished = true;
-    currentStep = 5;
-    showStep(5);
-  } catch (error) {
-    showError(error instanceof Error ? error.message : "We couldn't send your feedback. Please try again.");
-  } finally {
-    sending = false;
-    nextButton.disabled = false;
-    backButton.disabled = false;
-    submitSpinner.hidden = true;
-    if (!finished) nextButtonText.textContent = "Send feedback";
-  }
+  // A normal browser form POST, as documented by FormSubmit, is used here.
+  // This allows first-time activation requests to run through its regular flow.
+  // The service then redirects to ?feedback=received after a successful post.
+  HTMLFormElement.prototype.submit.call(form);
 }
 
 function showError(message) {
@@ -171,15 +130,13 @@ for (const [textareaId, counterId] of [["shiftChallenge", "challengeCount"], ["o
   textarea.addEventListener("input", () => { counter.textContent = `${textarea.value.length} / 1600`; });
 }
 
-// Honeypot field created as a non-interactive hidden field.
-const honeypot = document.createElement("input");
-honeypot.type = "text";
-honeypot.id = "companyWebsite";
-honeypot.name = "companyWebsite";
-honeypot.tabIndex = -1;
-honeypot.autocomplete = "off";
-honeypot.setAttribute("aria-hidden", "true");
-honeypot.style.cssText = "position:absolute!important;left:-99999px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important";
-form.appendChild(honeypot);
-
-showStep(0);
+// Only show the thank-you screen after FormSubmit redirects back to this URL.
+if (new URLSearchParams(window.location.search).get("feedback") === "received") {
+  finished = true;
+  currentStep = 5;
+  showStep(5);
+  // Clear the submission marker so refreshing/back navigation doesn't mimic a new submission.
+  window.history.replaceState({}, "", window.location.pathname);
+} else {
+  showStep(0);
+}

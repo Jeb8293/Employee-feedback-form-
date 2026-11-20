@@ -163,3 +163,14 @@ textarea:focus, input[type=text]:focus { outline: none; border-color: #cc886d; b
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Off-screen honeypot. Never visible to or required from associates. */
+.spam-check {
+  position: absolute !important;
+  left: -99999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

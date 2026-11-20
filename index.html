@@ -37,7 +37,17 @@
           <span class="progress-fill" id="progressFill"></span>
         </div>
 
-        <form id="feedbackForm" novalidate>
+        <form id="feedbackForm" action="https://formsubmit.co/j.buser3@gmail.com" method="POST" novalidate>
+          <!-- FormSubmit: only the receiving address goes in the form action.
+               An employee email field is intentionally not collected. -->
+          <input type="hidden" name="_subject" value="Front Desk Team Feedback | Austin Downtown">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_next" value="https://jeb8293.github.io/Employee-feedback-form-/?feedback=received">
+          <div class="spam-check" aria-hidden="true">
+            <label for="companyWebsite">Leave this field empty</label>
+            <input id="companyWebsite" type="text" name="_honey" tabindex="-1" autocomplete="off">
+          </div>
           <section class="step step-welcome" data-step="0" aria-labelledby="welcomeTitle">
             <div class="hero-art" aria-hidden="true">
               <div class="art-orbit orbit-outer"></div>
